@@ -1,11 +1,11 @@
-name: Build and Deploy to EC2
+name: CI/CD: Build and Deploy to EC2
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -15,21 +15,20 @@ jobs:
     - name: Log in to Docker Hub
       run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-    - name: Build Docker image
-      run: docker build -t ${{ secrets.DOCKER_USERNAME }}/fastapi-profile .
-
-    - name: Push Docker image
-      run: docker push ${{ secrets.DOCKER_USERNAME }}/fastapi-profile
-
-    - name: Decode PEM key from base64
+    - name: Build and Push Docker image
       run: |
-        echo LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFb2dJQkFBS0NBUUVBazdrNll3bFdYNWwrNWwxZ1R6ZmdJNjNrSnBpMWhBQStQZU9rWmM1azcvRjZJeGRjCkorZjRobnRDVFlYS3Vyb3pwTkxMZ3A5OVRCWDE3Qm5XeWFSVU5lZXN2Qm1Ud0pRZDU4MDdodmNpQ2tXT2pLcisKQkx5THpoVjN2K2J2SHh3RHV2eUpaS0NsRmRLOWsvQWFOaTZnd3AxWnJ0MWJRY0hzWTFUQXdSOXlqZEFtbFJtQQpoRkxyY0lRZ001VEVicGFlL2ZmYU4rYkwwSWVqTkNvK0hnVENPYVU3aE5ibWp0WHhzai9sKzh4QVhVMGpwQ2YwCmxXRE5teVdRVnh6anlyRHU4aDI0Nm5Qek9VZk9JRXJ0ODlQbis0b2x0R1ZJSGF4KzcrMmFiQkNoZFBrVllHTzAKeHN4T21BbmhyZWU2WWYrYW9GZEtqLzc1YlpkMXUyNUIyUmp1T1FJREFRQUJBb0lCQUVjNU1XdDZud2hzeTRCcQpXUHNZNTVxTVJzcE5Lb2RBVHNJc05hRllSOVpnU1JFT1BFS0pWNHdQZGNKRzFaMytGTlJOUmczdXM4eXhjZWFwCjlxTTE5ZHdmbldyN3NmOVI2ckZPaEhyb1FLTlBNaEdraCtEa3YwdFhrbXNWL3dpeXl5R21qTi9WaklMZkhzUnIKS1ZnaVZ5UStGWFY0Q0gzRjhDRmNSYXRYYkRYdkFJVkJPYWloNWhLWFZXMXJMb2NWWmgzN2ZOdUZMZERheWUzMApJdTh4R1FGekZ3TSsyc1N6dEVTNXpLWU5UVjVnYS95ZTVKbXErQ1hTOGRhSW82SlBNSnJHdjdCRXFMUzA4ZWx5CmFQdk1zdjg4VWUyVm4rbkNpSks4ODNjWkZ0WUd0K2NzZnJCL1RmQTRYcXJ0SGxBYXRKRloxZk9TamE0UFJRQ0YKNS9GVHR0a0NnWUVBd3Mrb3hla0pVdDZlWjVKRUFzcGhaRVFQd0tjRmthd0lLTk5YRjM1Nzg0eW1pQ1Y0ajZ2NgoweWxJOFkrREZ6VytrUmg4MUdEMEUrSWVqTGlBaWxvWk9NbE5ZbSs3bVJaZFc5ZmRhdFBmMTBHbDVReUhkSSs0CjYvTi90bmJrS2x4ajY1eWhSMHNUYjBMOFNScktSOEY2QWdnNDB1ZFpaWlhRZ2dkbHdnakFXeThDZ1lFQXdoOWIKSDBmTFRMdTVPZUU3eWhqNHFyOFVLcTlYbVhmRFhWWGU1Q2xndDljc0NOUE84QlFEZ2NNYVBDaEhwRzhNZUp5SAplL29wQXlhZWtabHdITC96Y3QzSHgxQU5wK3NwaFpncHNtT09wQXltRWZFUHhSTFJKN1ZNcStqQjNOQWJscU1qCmRLZEhBYWU4dy9VUk9HR3RISEV0dUhwUkZQOFljbjl0MlVlbjB4Y0NnWUFOTzlZWE83RnFjNzBIQkNTaW0rVHAKenNYVExJVndVK05xQXBGVUF6K2dWOW1vUGdObW55UTIzQU1jaGNjOStHU3RycUFzUFRuWGIvRHJWazFGR01IRgozY2JuL1BjZGV5dDBaY0dnMUN2TWo2VVpYalNGY28zNVdWMC9vK3YwQkxxMDhycnlBT09kRjB2VUc0SEtSaFpuCnRPOUhSSGdLTXBjcmZoMG5oVGlyK1FLQmdBNEU3N0xCbjVnS0VxVndjNzN6c2JtN0ZQekVMd0poV05XYnh2NFoKVXVmVC9WVWgzdGNOeXZjTEhSRHRJOGRuVWJKQU03U3JhMXpUNUMzRnRBZ1BnTWh4NWVTcURtSnJKRk9HbXJSTQpabGZJcGhHenBCenFiL3A3S0c5ZDN1cFFpVDJHeUorN0dQQ3dxWHhKYlpYeHordTI3TU5lNmc0bkloL2F2aGNzCkNwMi9Bb0dBQjJTVk14TGEyS0xnSEEvc2xGR2RrTThrTEludTZHdlFiWS9KUWNvL3orem1PSk0yMkE5eFIvZjMKL3hJNU5yUHlCdkI4Q3JQb3dCVDdSckd2bFlZZGdvUVY2UlFXdkNTOEcvc0U3NUxYVURZY1VTWnp3QjlQd0JhUApvU1NySGFta3JqOTNsMlpuM3hmU2dKZHZvQ1lZbkpsV1JzQzlKYWhoeE5XYllmOFQ4N009Ci0tLS0tRU5EIFJTQSBQUklWQVRFIEtFWS0tLS0t | base64 -d > ec2-key.pem
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/fastapi-profile .
+        docker push ${{ secrets.DOCKER_USERNAME }}/fastapi-profile
+
+    - name: Decode EC2 SSH key
+      run: |
+        echo "${{ secrets.EC2_KEY_B64 }}" | base64 -d > ec2-key.pem
         chmod 600 ec2-key.pem
 
-    - name: Deploy to EC2 via SSH
+    - name: Deploy to EC2
       uses: appleboy/ssh-action@master
       with:
-        host: 13.210.179.214
+        host: ${{ secrets.EC2_HOST }}
         username: ubuntu
         key: ${{ github.workspace }}/ec2-key.pem
         script: |
