@@ -4,4 +4,4 @@ app = FastAPI()
 
 @app.get("/")
 def root():
-    return {"message": "Hello from FastAPI on Ubuntu!"}
+    return {"message": "Hello from Me FastAPI on Ubuntu!"}
