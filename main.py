@@ -4,4 +4,4 @@ app = FastAPI()
 
 @app.get("/")
 def root():
-    return {"message": " Everything Fahad latest from Me FastAPI123344 on Ubuntu!"}
+    return {"message": " Hello World from my Fast api app run on EC2!"}
