@@ -35,7 +35,7 @@ def get_db():
 
 @app.get("/")
 def root():
-    return {"message": " Hello World from my Fast api app run on EC2!"}
+    return {"message": " Hello Hello World from my Fast api app run on EC2!"}
 
 
 @app.post("/flats/", response_model=FlatRead)
