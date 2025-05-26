@@ -1,4 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, File, UploadFile
+from fastapi.responses import StreamingResponse
+from s3_utils import upload_file_to_s3, download_file_from_s3
 from database import engine
 from models import Base
 from fastapi import FastAPI, Depends, HTTPException
@@ -11,7 +13,7 @@ from typing import List
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-
+S3_BUCKET = "EC2"
 
 class FlatCreate(BaseModel):
     address: str
@@ -49,3 +51,15 @@ def create_flat(flat: FlatCreate, db: Session = Depends(get_db)):
 @app.get("/flats/", response_model=List[FlatRead])
 def list_flats(db: Session = Depends(get_db)):
     return db.query(Flat).all()
+
+
+@app.post("/upload/")
+async def upload_file(file: UploadFile = File(...)):
+    file.file.seek(0)
+    upload_file_to_s3(file.file, S3_BUCKET, file.filename)
+    return {"filename": file.filename}
+
+@app.get("/download/{filename}")
+def download_file(filename: str):
+    data = download_file_from_s3(S3_BUCKET, filename)
+    return StreamingResponse(iter([data]), media_type="application/octet-stream")
