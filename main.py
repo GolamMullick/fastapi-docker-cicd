@@ -15,7 +15,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-S3_BUCKET = "EC2"
+S3_BUCKET = "golam1991-bucket"
 
 class FlatCreate(BaseModel):
     address: str
