@@ -9,6 +9,8 @@ from models import Flat
 from database import SessionLocal
 from pydantic import BaseModel
 from typing import List
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from botocore.exceptions import BotoCoreError, ClientError
 
 Base.metadata.create_all(bind=engine)
 
@@ -55,9 +57,16 @@ def list_flats(db: Session = Depends(get_db)):
 
 @app.post("/upload/")
 async def upload_file(file: UploadFile = File(...)):
-    file.file.seek(0)
-    upload_file_to_s3(file.file, S3_BUCKET, file.filename)
-    return {"filename": file.filename}
+    try:
+        file.file.seek(0)
+        upload_file_to_s3(file.file, S3_BUCKET, file.filename)
+        return {"filename": file.filename}
+    except (BotoCoreError, ClientError) as e:
+        # AWS S3 error
+        raise HTTPException(status_code=500, detail=f"S3 error: {str(e)}")
+    except Exception as e:
+        # Other errors
+        raise HTTPException(status_code=400, detail=f"File upload failed: {str(e)}")
 
 @app.get("/download/{filename}")
 def download_file(filename: str):
