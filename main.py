@@ -3,6 +3,7 @@ import time
 import json
 from threading import Thread
 from typing import List
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, UploadFile, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -31,7 +32,17 @@ dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
 Base.metadata.create_all(bind=engine)
 
 # --------- FASTAPI APP ---------
-app = FastAPI()
+processing = True  # Global flag for worker control
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("Starting worker thread (lifespan event)")
+    worker = Thread(target=worker_loop, daemon=True)
+    worker.start()
+    yield
+    # Optionally, handle shutdown here (not needed for daemon thread)
+
+app = FastAPI(lifespan=lifespan)
 
 # --------- Pydantic Schemas ---------
 class FlatCreate(BaseModel):
@@ -99,8 +110,6 @@ def download_file_from_s3(bucket, filename):
     return stream.read()
 
 # --------- SQS/DynamoDB WORKER ---------
-processing = True
-
 def process_file(bucket, key):
     local_path = f"/tmp/{key.split('/')[-1]}"
     try:
@@ -151,10 +160,6 @@ def worker_loop():
         except Exception as e:
             print(f"Worker loop error: {e}")
             time.sleep(5)
-
-@app.on_event("startup")
-def startup_event():
-    Thread(target=worker_loop, daemon=True).start()
 
 @app.get("/worker-health")
 def worker_health():
