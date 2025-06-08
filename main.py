@@ -161,7 +161,7 @@ def worker_loop():
             print(f"Worker loop error: {e}")
             time.sleep(5)
 
-@app.get("/worker-health")
+@app.get("/worker-health-2")
 def worker_health():
     return {"status": "ok", "worker_running": processing}
 
@@ -171,7 +171,7 @@ def get_job(job_id: str):
     resp = table.get_item(Key={"job_id": job_id})
     return resp.get("Item", {"error": "Job not found"})
 
-@app.post("/stop-worker")
+@app.post("/stop-worker-2")
 def stop_worker():
     global processing
     processing = False
