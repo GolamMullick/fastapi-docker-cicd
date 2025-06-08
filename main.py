@@ -12,7 +12,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 
 import boto3
 
-# Your existing SQLAlchemy/database setup
+# SQLAlchemy/database setup
 from database import engine, SessionLocal
 from models import Base, Flat
 
@@ -103,31 +103,53 @@ processing = True
 
 def process_file(bucket, key):
     local_path = f"/tmp/{key.split('/')[-1]}"
-    s3.download_file(bucket, key, local_path)
-    # Simulate processing
-    time.sleep(2)
-    return "pass"
+    try:
+        print(f"Trying to download: bucket={bucket}, key={key}")
+        s3.download_file(bucket, key, local_path)
+        # Simulate processing
+        time.sleep(2)
+        return "pass"
+    except Exception as e:
+        print(f"Error downloading file from S3: {e}")
+        return f"failed: {e}"
 
 def worker_loop():
     global processing
+    print("Worker thread started")
     while processing:
-        msgs = sqs.receive_message(QueueUrl=QUEUE_URL, MaxNumberOfMessages=1, WaitTimeSeconds=10)
-        if "Messages" in msgs:
-            for msg in msgs["Messages"]:
-                body = json.loads(msg["Body"])
-                job_id = body["job_id"]
-                bucket = body["bucket"]
-                key = body["key"]
-                result = process_file(bucket, key)
-                table = dynamodb.Table(TABLE_NAME)
-                table.update_item(
-                    Key={"job_id": job_id},
-                    UpdateExpression="set #s=:s, #r=:r",
-                    ExpressionAttributeNames={"#s": "status", "#r": "result"},
-                    ExpressionAttributeValues={":s": "done", ":r": result},
-                )
-                sqs.delete_message(QueueUrl=QUEUE_URL, ReceiptHandle=msg["ReceiptHandle"])
-        else:
+        try:
+            msgs = sqs.receive_message(QueueUrl=QUEUE_URL, MaxNumberOfMessages=1, WaitTimeSeconds=10)
+            if "Messages" in msgs:
+                for msg in msgs["Messages"]:
+                    try:
+                        # Check if message body is non-empty and valid JSON
+                        body = json.loads(msg["Body"])
+                        job_id = body.get("job_id")
+                        bucket = body.get("bucket")
+                        key = body.get("key")
+                        if not (job_id and bucket and key):
+                            raise ValueError("Missing job_id, bucket, or key in message body.")
+                    except Exception as e:
+                        print(f"Malformed SQS message or empty body: {e}, message: {msg}")
+                        # Delete malformed message to avoid infinite loop
+                        sqs.delete_message(QueueUrl=QUEUE_URL, ReceiptHandle=msg["ReceiptHandle"])
+                        continue
+
+                    result = process_file(bucket, key)
+                    status = "done" if result == "pass" else "failed"
+                    table = dynamodb.Table(TABLE_NAME)
+                    table.update_item(
+                        Key={"job_id": job_id},
+                        UpdateExpression="set #s=:s, #r=:r",
+                        ExpressionAttributeNames={"#s": "status", "#r": "result"},
+                        ExpressionAttributeValues={":s": status, ":r": result},
+                    )
+                    print(f"Job {job_id}: Status updated to {status}.")
+                    sqs.delete_message(QueueUrl=QUEUE_URL, ReceiptHandle=msg["ReceiptHandle"])
+            else:
+                time.sleep(5)
+        except Exception as e:
+            print(f"Worker loop error: {e}")
             time.sleep(5)
 
 @app.on_event("startup")
