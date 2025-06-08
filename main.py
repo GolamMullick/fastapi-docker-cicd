@@ -176,3 +176,11 @@ def stop_worker():
     global processing
     processing = False
     return {"status": "worker stopping"}
+
+@app.get("/db-health")
+def db_health(db: Session = Depends(get_db)):
+    try:
+        db.execute("SELECT 1")
+        return {"status": "ok", "message": "Postgres Database connection is healthy."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
