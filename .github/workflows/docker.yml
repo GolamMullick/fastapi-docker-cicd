@@ -13,17 +13,17 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v3
 
-      - name: 🛠️ Build Docker image
-        run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/fastapi-profile .
-
       - name: 🔐 Log in to Docker Hub
         run: |
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
+      - name: 🛠️ Build Docker image (no cache)
+        run: |
+          docker build --no-cache --pull -t ${{ secrets.DOCKER_USERNAME }}/fastapi-profile:latest .
+
       - name: 🚀 Push Docker image
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/fastapi-profile
+          docker push ${{ secrets.DOCKER_USERNAME }}/fastapi-profile:latest
 
       - name: 🧳 Deploy to EC2 via SSH
         uses: appleboy/ssh-action@master
@@ -32,15 +32,20 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
           script: |
-            echo "📦 Pulling latest Docker image..."
+            echo "🔑 Logging in to Docker Hub..."
             docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-            docker pull ${{ secrets.DOCKER_USERNAME }}/fastapi-profile
 
-            echo "🧹 Cleaning up old container..."
+            echo "🛑 Stopping and removing old container..."
             docker stop app || true
             docker rm app || true
 
+            echo "🧹 Removing old Docker image (if any)..."
+            docker rmi ${{ secrets.DOCKER_USERNAME }}/fastapi-profile:latest || true
+
+            echo "📦 Pulling latest Docker image..."
+            docker pull ${{ secrets.DOCKER_USERNAME }}/fastapi-profile:latest
+
             echo "🚀 Starting new container..."
-            docker run -d --name app -p 80:80 ${{ secrets.DOCKER_USERNAME }}/fastapi-profile
+            docker run -d --name app -p 80:80 ${{ secrets.DOCKER_USERNAME }}/fastapi-profile:latest
 
             echo "✅ Deployment complete"
